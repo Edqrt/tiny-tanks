@@ -29,13 +29,14 @@ export function segmentRect(a, b, box) {
 }
 
 function rayRect(x,y,dx,dy,box) {
-  const tx=Math.abs(dx)<1e-9?[-Infinity,Infinity]:[(box.x-x)/dx,(box.x+box.w-x)/dx].sort((a,b)=>a-b);
-  const ty=Math.abs(dy)<1e-9?[-Infinity,Infinity]:[(box.y-y)/dy,(box.y+box.h-y)/dy].sort((a,b)=>a-b);
+  let xNear=-Infinity,xFar=Infinity,yNear=-Infinity,yFar=Infinity;
+  if(Math.abs(dx)>=1e-9){const a=(box.x-x)/dx,b=(box.x+box.w-x)/dx;xNear=Math.min(a,b);xFar=Math.max(a,b);}
+  if(Math.abs(dy)>=1e-9){const a=(box.y-y)/dy,b=(box.y+box.h-y)/dy;yNear=Math.min(a,b);yFar=Math.max(a,b);}
   if(Math.abs(dx)<1e-9&&(x<box.x||x>box.x+box.w))return null;
   if(Math.abs(dy)<1e-9&&(y<box.y||y>box.y+box.h))return null;
-  const entry=Math.max(tx[0],ty[0]),exit=Math.min(tx[1],ty[1]);
+  const entry=Math.max(xNear,yNear),exit=Math.min(xFar,yFar);
   if(exit<0||entry>exit)return null;
-  return {distance:Math.max(0,entry),hitX:tx[0]>=ty[0]-1e-7,hitY:ty[0]>=tx[0]-1e-7};
+  return {distance:Math.max(0,entry),hitX:xNear>=yNear-1e-7,hitY:yNear>=xNear-1e-7};
 }
 
 export function isTankVisible(t,state,introRemaining=0) {
@@ -405,13 +406,34 @@ export class Game {
     if(target.x<BOUNDS.x+TANK_RADIUS||target.x>BOUNDS.x+BOUNDS.w-TANK_RADIUS||target.y<BOUNDS.y+TANK_RADIUS||target.y>BOUNDS.y+BOUNDS.h-TANK_RADIUS)return null;
     return {angle:Math.atan2(sy*target.y+oy-t.y,sx*target.x+ox-t.x),target,time};
   }
-  findRicochetAim(t) {
+  *ricochetCandidates(maxBounces) {
+    const faces=this.shotGeometry().faces;
+    let images=[{sx:1,sy:1,ox:0,oy:0}],remaining=4096;
+    for(let depth=1;depth<=maxBounces;depth++){
+      const next=[],seen=new Set();
+      for(const image of images)for(const [axis,value] of faces){
+        const sign=axis==='x'?'sx':'sy',offset=axis==='x'?'ox':'oy';
+        const reflected={...image,[sign]:-image[sign],[offset]:2*value-image[offset]};
+        const key=`${reflected.sx},${reflected.sy},${reflected.ox},${reflected.oy}`;
+        if(seen.has(key))continue;
+        seen.add(key);next.push(reflected);
+        if(reflected.sx===1&&reflected.sy===1&&reflected.ox===0&&reflected.oy===0)continue;
+        yield {...reflected,bounces:depth};
+        if(--remaining<=0)return;
+      }
+      images=next;
+    }
+  }
+  findRicochetAim(t,candidateBudget=Infinity) {
     const directSolution=this.interceptAim(t);
     const direct=directSolution?.angle??Math.atan2(this.player.y-t.y,this.player.x-t.x);
     const directPath=directSolution&&this.traceShot(t,direct,{details:true,target:directSolution.target});
-    if(directPath?.bounces===0){t.ricochetTransform=null;return direct;}
-    const faces=this.shotGeometry().faces;
-    let images=[{sx:1,sy:1,ox:0,oy:0}],best=null,bestTransform=null,bestScore=Infinity;
+    if(directPath?.bounces===0){t.ricochetTransform=null;t.ricochetSearch=null;return direct;}
+    let search=t.ricochetSearch;
+    if(candidateBudget===Infinity||!search||search.walls!==this.walls||search.limit!==t.profile.maxBounces){
+      search={walls:this.walls,limit:t.profile.maxBounces,iterator:this.ricochetCandidates(t.profile.maxBounces)};
+    }
+    let best=null,bestTransform=null,bestScore=Infinity;
     const consider=(transform,depth)=>{
       const solution=this.interceptAim(t,transform);if(!solution)return;
       const {angle,target}=solution,path=this.traceShot(t,angle,{details:true,target});
@@ -419,16 +441,14 @@ export class Game {
       const score=path.distance+path.bounces*40+Math.max(0,-Math.cos(angle-direct))*150;
       if(score<bestScore){best=angle;bestTransform={...transform,bounces:depth};bestScore=score;}
     };
-    let budget=4096;
-    for(let depth=0;depth<t.profile.maxBounces;depth++){
-      const next=[];
-      for(const image of images)for(const [axis,value] of faces){
-        const sign=axis==='x'?'sx':'sy',offset=axis==='x'?'ox':'oy';
-        const reflected={...image,[sign]:-image[sign],[offset]:2*value-image[offset]};consider(reflected,depth+1);next.push(reflected);
-        if(--budget<=0){t.ricochetTransform=bestTransform;return best;}
-      }
-      images=next;
+    t.ricochetSearch=search;
+    for(let count=0;count<candidateBudget;count++){
+      const next=search.iterator.next();
+      if(next.done){t.ricochetSearch=null;break;}
+      consider(next.value,next.value.bounces);
     }
+    // A sliced search can use a valid route immediately, rechecking it next tick.
+    if(best!==null)t.ricochetSearch=null;
     t.ricochetTransform=bestTransform;return best;
   }
   turnEnemyTurret(e,target,dt) {
@@ -449,7 +469,7 @@ export class Game {
       return visible&&Math.abs(Math.atan2(Math.sin(direct-e.aim),Math.cos(direct-e.aim)))<profile.scanTolerance;
     }
     if(profile.aimMode==='ricochet'){
-      if(solution&&this.traceShot(e,direct,{target:solution.target})===0){e.targetAcquired=true;e.ricochetTransform=null;e.shotAim=direct;e.aimThink=0;return this.turnEnemyTurret(e,direct,dt);}
+      if(solution&&this.traceShot(e,direct,{target:solution.target})===0){e.targetAcquired=true;e.ricochetTransform=null;e.ricochetSearch=null;e.shotAim=direct;e.aimThink=0;return this.turnEnemyTurret(e,direct,dt);}
       e.aimThink-=dt;
       if(e.aimWallSource!==this.walls){e.aimThink=0;e.aimWallSource=this.walls;}
       if(e.ricochetTransform){
@@ -457,7 +477,11 @@ export class Game {
         if(next&&this.traceShot(e,next.angle,{target:next.target})===e.ricochetTransform.bounces){e.targetAcquired=true;e.shotAim=next.angle;return this.turnEnemyTurret(e,next.angle,dt);}
         e.ricochetTransform=null;e.aimThink=0;
       }
-      if(e.aimThink<=1e-9){e.aimThink=profile.ricochetSearchInterval;e.shotAim=this.findRicochetAim(e);}
+      if(e.aimThink<=1e-9||e.ricochetSearch){
+        const budget=this.shotGeometry().faces.length>24?(this.ricochetSlice??32):Infinity;
+        e.shotAim=this.findRicochetAim(e,budget);
+        e.aimThink=e.ricochetSearch?0:profile.ricochetSearchInterval;
+      }
       else return false;
       if(e.shotAim===null||e.shotAim===undefined)return false;
       e.targetAcquired=true;
@@ -517,6 +541,8 @@ export class Game {
     this.bulletSmoke=this.bulletSmoke.filter(puff=>puff.life>0);
     if(this.state!=='playing')return;
     this.time+=dt;
+    const ricochetTanks=this.enemies.filter(e=>e.alive&&e.profile.aimMode==='ricochet').length;
+    this.ricochetSlice=Math.max(1,Math.min(32,Math.floor(96/Math.max(1,ricochetTanks))));
     const p=this.player;
     for(const t of [p,...this.enemies]){t.cooldown=Math.max(0,t.cooldown-dt);t.mineCooldown=Math.max(0,t.mineCooldown-dt);}
     if(input.aim)p.aim=Math.atan2(input.aim.y-p.y,input.aim.x-p.x);
