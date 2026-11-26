@@ -15,13 +15,30 @@ const game=customMaps?new Game(Math.random,customMaps):new Game();
 const bestKey=testMode?'tiny-tanks-test-best':'tiny-tanks-best';
 if(testMode)$('editor-link').setAttribute('aria-label','編集に戻る');
 const keys=new Set(),pointer={x:560,y:320},stick={x:0,y:0};
-let firing=false,paused=false,sound=true,audio,music,previous=0,accumulator=0,lastState='ready',stateAge=0,shake=0,joystickPointer=null;
+let firing=false,paused=false,sound=true,audio,masterGain,music,previous=0,accumulator=0,lastState='ready',stateAge=0,shake=0,joystickPointer=null;
+const volumeKey='tiny-tanks-volume';
+let volume=33;
+try{
+  const saved=localStorage.getItem(volumeKey);
+  if(saved!==null&&saved.trim()!==''&&Number.isFinite(Number(saved)))volume=clamp(Number(saved),0,100);
+}catch{}
+function applyVolume(){
+  $('sound-volume').value=volume;
+  $('sound-volume-value').textContent=`${Math.round(volume)}%`;
+  if(masterGain)masterGain.gain.setTargetAtTime(sound?volume/100:0,audio.currentTime,.01);
+}
+applyVolume();
 let best=0;try{best=Number(localStorage.getItem(bestKey))||0;}catch{}
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function enableAudio(){
   audio??=new (window.AudioContext||window.webkitAudioContext)();
-  music??=new AdaptiveMusic(audio);
+  if(!masterGain){
+    masterGain=audio.createGain();
+    masterGain.gain.value=sound?volume/100:0;
+    masterGain.connect(audio.destination);
+  }
+  music??=new AdaptiveMusic(audio,masterGain);
   if(audio.state==='suspended')audio.resume().catch(()=>{});
 }
 function syncMusic(){music?.update(game.enemies,sound&&!paused&&!document.hidden&&game.state==='playing',game.introRemaining);}
@@ -32,7 +49,7 @@ function tone(freq,duration,type='sine',volume=.04,slide=0){
     const osc=audio.createOscillator(),gain=audio.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audio.currentTime);
     osc.frequency.exponentialRampToValueAtTime(Math.max(25,freq+slide),audio.currentTime+duration);
     gain.gain.setValueAtTime(volume,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);
-    osc.connect(gain);gain.connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration);
+    osc.connect(gain);gain.connect(masterGain);osc.start();osc.stop(audio.currentTime+duration);
   }catch{}
 }
 function eventSound(type){
@@ -165,8 +182,15 @@ function primary(){
   clearInput();lastState=game.state;stateAge=0;syncMusic();showState();hud();canvas.focus({preventScroll:true});
 }
 $('primary').addEventListener('click',primary);$('pause').addEventListener('click',togglePause);
-$('sound').addEventListener('click',()=>{sound=!sound;$('sound').textContent=sound?'♫':'♪';$('sound').setAttribute('aria-pressed',String(sound));$('sound').setAttribute('aria-label',sound?'サウンドを無効にする':'サウンドを有効にする');if(sound)tone(560,.1);syncMusic();});
+$('sound-volume').addEventListener('input',()=>{
+  volume=Number($('sound-volume').value);
+  applyVolume();
+  try{localStorage.setItem(volumeKey,String(volume));}catch{}
+});
+$('sound-volume').addEventListener('focus',clearInput);
+$('sound').addEventListener('click',()=>{sound=!sound;applyVolume();$('sound').textContent=sound?'♫':'♪';$('sound').setAttribute('aria-pressed',String(sound));$('sound').setAttribute('aria-label',sound?'サウンドを無効にする':'サウンドを有効にする');if(sound)tone(560,.1);syncMusic();});
 window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)&&e.target.tagName!=='BUTTON')e.preventDefault();
   if(e.repeat)return;
   if(e.code==='KeyP'||e.code==='Escape'){togglePause();return;}

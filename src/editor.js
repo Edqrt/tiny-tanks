@@ -13,7 +13,7 @@ const levelSaver=createLevelSaver({pickFile:window.isSecureContext&&window.showS
 $('save-source').disabled=true;
 levelSaver.detect().then(method=>{
   $('save-source').disabled=false;
-  $('save-hint').textContent=method==='server'?'標準レベルへの保存はプロジェクトの levels.js に直接反映されます。':method==='file'?'Live Serverなどの静的サーバーでは、保存先に Tanks/levels.js を選んでください。':'このブラウザでは levels.js をダウンロードします。プロジェクトの Tanks/levels.js と置き換えてください。';
+  $('save-hint').textContent=method==='server'?'標準レベルへの保存はsrc/levels.js に直接反映されます。':method==='file'?'Live Serverなどの静的サーバーでは、保存先に src/levels.js を選んでください。':'このブラウザでは levels.js をダウンロードします。プロジェクトの src/levels.js と置き換えてください。';
   $('save-source').title=$('save-hint').textContent;
   if(method==='download')$('save-source').textContent='↓ JS';
 });
@@ -161,7 +161,7 @@ $('save-source').addEventListener('click',async()=>{
   try{
     save();
     const result=await levelSaver.save(maps);
-    $('save-status').textContent=result.method==='download'?'levels.js を書き出しました。Tanks/levels.js と置き換えて、ゲームを再読み込みしてください。':'✓ levels.js に保存しました。通常のゲームを再読み込みすると反映されます。';
+    $('save-status').textContent=result.method==='download'?'levels.js を書き出しました。src/levels.js と置き換えて、ゲームを再読み込みしてください。':'✓ levels.js に保存しました。通常のゲームを再読み込みすると反映されます。';
   }catch(error){$('save-status').textContent=error.name==='AbortError'?'保存をキャンセルしました。編集内容はブラウザに残っています。':`標準レベルに保存できません：${error.message}`;}
   finally{button.disabled=false;}
 });

@@ -26,7 +26,7 @@ export function createLevelSaver({fetcher=globalThis.fetch,pickFile,download,api
       }
       if(!pickFile){download(source,'levels.js');return {method:'download'};}
       const handle=fileHandle||await pickFile({suggestedName:'levels.js',types:[{description:'レベルデータ（JavaScript）',accept:{'text/javascript':['.js']}}]});
-      if(handle.name!=='levels.js')throw new Error('Tanksフォルダーの levels.js を保存先に選んでください。');
+      if(handle.name!=='levels.js')throw new Error('src フォルダーの levels.js を保存先に選んでください。');
       let writable;
       try{
         writable=await handle.createWritable();await writable.write(source);await writable.close();fileHandle=handle;

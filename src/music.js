@@ -53,7 +53,7 @@ export function sampleRegion(voice, note, velocity) {
 }
 
 export class AdaptiveMusic {
-  constructor(context) {
+  constructor(context, destination=context.destination) {
     this.context = context;
     this.output = context.createGain();
     this.output.gain.value = .38;
@@ -61,7 +61,7 @@ export class AdaptiveMusic {
     compressor.threshold.value = -12;
     compressor.ratio.value = 4;
     this.output.connect(compressor);
-    compressor.connect(context.destination);
+    compressor.connect(destination);
     this.voices = new Set();
     this.step = 0;
     this.introStep = 0;
