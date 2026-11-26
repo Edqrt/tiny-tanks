@@ -15,7 +15,7 @@ const game=customMaps?new Game(Math.random,customMaps):new Game();
 const bestKey=testMode?'tiny-tanks-test-best':'tiny-tanks-best';
 if(testMode)$('editor-link').setAttribute('aria-label','編集に戻る');
 const keys=new Set(),pointer={x:560,y:320},stick={x:0,y:0};
-let firing=false,paused=false,sound=false,audio,music,previous=0,accumulator=0,lastState='ready',stateAge=0,shake=0,joystickPointer=null;
+let firing=false,paused=false,sound=true,audio,music,previous=0,accumulator=0,lastState='ready',stateAge=0,shake=0,joystickPointer=null;
 let best=0;try{best=Number(localStorage.getItem(bestKey))||0;}catch{}
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -155,6 +155,7 @@ function showState(){
 function clearInput(){keys.clear();firing=false;stick.x=stick.y=0;joystickPointer=null;$('joystick').firstElementChild.style.transform='';}
 function togglePause(){if(game.state!=='playing')return;paused=!paused;clearInput();syncMusic();showState();hud();}
 function primary(){
+  if(sound){try{enableAudio();}catch{}}
   const previousEnemies=game.enemies;
   if(paused){paused=false;}
   else if(game.state==='ready'||game.state==='gameover'||game.state==='won')game.start();
