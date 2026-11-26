@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><meta name="theme-color" content="#243c32"><title>レベルエディタ — TINY TANKS</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="editor.css"></head>
+<body>
+  <main class="editor-shell">
+    <header class="topbar"><a class="brand" href="./">▰ TINY TANKS</a><a class="back-link icon-button" href="./" aria-label="ゲームへ戻る" title="ゲームへ戻る">↗</a></header>
+    <div class="editor-toolbar"><select id="level-select" aria-label="編集するレベル"></select><button id="new-level" aria-label="新規レベル" title="新規レベル">＋</button><button id="duplicate-level" aria-label="レベルを複製" title="複製">⧉</button><button id="delete-level" aria-label="レベルを削除" title="削除">×</button><span class="toolbar-spacer"></span><button id="undo" aria-label="元に戻す" title="元に戻す（Ctrl / ⌘ + Z）">↶</button><button id="redo" aria-label="やり直す" title="やり直す（Ctrl / ⌘ + Shift + Z）">↷</button></div>
+    <div class="editor-layout">
+      <aside class="editor-sidebar" aria-label="配置ツール"><div id="terrain-tools" class="tool-list"></div><div id="enemy-tools" class="tool-list" aria-label="敵戦車"></div></aside>
+      <section class="editor-workspace" aria-label="マップ編集">
+        <div class="map-header"><label>作戦名 <input id="level-name" maxlength="60" autocomplete="off"></label><span id="map-count"></span></div>
+        <div class="selection-toolbar" hidden><span id="selection-info" aria-live="polite"></span><div><button data-selection-action="left" aria-label="選択範囲を左へ移動">←</button><button data-selection-action="up" aria-label="選択範囲を上へ移動">↑</button><button data-selection-action="down" aria-label="選択範囲を下へ移動">↓</button><button data-selection-action="right" aria-label="選択範囲を右へ移動">→</button><button data-selection-action="delete" aria-label="範囲を消去" title="範囲を消去">⌫</button><button data-selection-action="deselect" aria-label="選択解除" title="選択解除">×</button></div></div>
+        <div class="map-scroll"><canvas id="map-canvas" width="1120" height="640" tabindex="0" aria-label="タイルマップ。矢印で選択マスを移動、EnterまたはSpaceで配置。"></canvas></div>
+        <footer class="field-footer map-footer"><div class="controls-footer" aria-label="操作説明"><span><kbd>ドラッグ</kbd> 配置</span><span><kbd>右ドラッグ / Del</kbd> 消去</span><span><kbd>V</kbd> 範囲選択・移動</span><span><kbd>↑↓←→</kbd> マス移動</span><span><kbd>Enter / Space</kbd> 配置</span><span><kbd>Esc</kbd> 選択解除</span><span><kbd>Ctrl / ⌘ + Z</kbd> 戻す · <kbd>Shift</kbd> やり直す</span></div><div class="map-position"><span id="cursor-position"></span><span id="selected-tool"></span></div></footer>
+        <div class="validation" id="validation" role="status"></div>
+        <div class="editor-actions"><button id="play-level" class="play-button" aria-label="このレベルを試遊" title="このレベルを試遊">▶</button><button id="play-pack" aria-label="全レベルを試遊" title="全レベルを試遊">▶▶</button><button id="save-source" title="標準レベルに保存">保存</button><button id="export" title="JSONを書き出す">↓ JSON</button><button id="import" title="JSONを読み込む">↑ JSON</button><input id="import-file" type="file" accept=".json,application/json" hidden></div>
+        <p id="save-hint" hidden></p><p class="save-status" id="save-status" aria-live="polite"></p>
+      </section>
+    </div>
+  </main>
+  <script>
+    const entry=document.createElement('script');
+    if(location.protocol==='file:')entry.src='editor.bundle.js';
+    else {entry.type='module';entry.src='editor.js';}
+    document.body.append(entry);
+  </script>
+</body></html>

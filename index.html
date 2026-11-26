@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#243c32">
+  <meta name="description" content="小さな戦車、大きな作戦。跳弾と地雷を使いこなす、見下ろし型ブラウザ戦車ゲーム。">
+  <title>TINY TANKS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Tiny Tanks ホーム"><span class="brand-icon">▰</span> TINY TANKS<span class="brand-dot">®</span></a>
+      <div class="top-actions"><a id="editor-link" href="editor.html" class="icon-button" aria-label="レベルエディタ">✎</a><button id="sound" class="icon-button" aria-label="サウンドを有効にする" aria-pressed="false">♪</button></div>
+    </header>
+
+    <section class="game-section" aria-label="戦車ゲーム">
+      <div class="dashboard">
+        <div class="mission-data"><span class="hud-label">MISSION</span><strong id="mission">01 <span>/ 12</span></strong></div>
+        <div class="hud-stats"><div><span class="hud-label">LIVES</span><strong id="lives" class="lives">◆ ◆ ◆</strong></div><div><span class="hud-label">TARGETS</span><strong id="targets">02</strong></div><div class="score-stat"><span class="hud-label">SCORE</span><strong id="score">00000</strong></div></div>
+        <button id="pause" class="pause-button" aria-label="一時停止">Ⅱ</button>
+      </div>
+      <div class="arena-wrap" id="arena-wrap">
+        <canvas id="game" width="1120" height="640" tabindex="0" aria-label="戦場。WASDまたは矢印で移動、マウスで照準、クリックで発射、スペースで地雷。">Canvasに対応したブラウザで開いてください。</canvas>
+        <div class="overlay" id="overlay">
+          <div class="overlay-card"><div class="tank-mark" aria-hidden="true"><i></i><b></b></div><h2 id="card-title" hidden></h2><p id="life-bonus" class="life-bonus" hidden>残機＋1</p><button id="primary" class="primary-button" aria-label="ゲームを開始">▶</button></div>
+        </div>
+        <div id="touch-controls" class="touch-controls"><div id="joystick" class="joystick"><span></span></div><button id="touch-mine" aria-label="地雷を設置">✹</button><button id="touch-fire" aria-label="砲弾を発射">◎</button></div>
+      </div>
+      <footer class="field-footer">
+        <div class="controls-footer" aria-label="操作説明"><span><kbd>WASD / ↑↓←→</kbd> 移動</span><span><kbd>マウス</kbd> 照準</span><span><kbd>クリック</kbd> 発射</span><span><kbd>Space</kbd> 地雷</span><span><kbd>P / Esc</kbd> 一時停止</span><span><kbd>R</kbd> 再挑戦</span></div>
+        <div class="field-resources"><span id="ammo" class="ammo" aria-label="残弾">● ● ● ● ●</span><span class="footer-divider"></span><span aria-label="地雷">✹ <b id="mines">2</b></span></div>
+      </footer>
+    </section>
+    <p id="announcement" class="sr-only" aria-live="polite"></p>
+  </main>
+  <script>
+    const entry=document.createElement('script');
+    if(location.protocol==='file:')entry.src='game.bundle.js';
+    else {entry.type='module';entry.src='game.js';}
+    document.body.append(entry);
+  </script>
+</body>
+</html>
