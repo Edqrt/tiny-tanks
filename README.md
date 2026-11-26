@@ -48,6 +48,8 @@ npm run build
 
 `dist/index.html` をダブルクリックすると、Node.jsなしで遊べます。エディタは `dist/editor.html` です。`dist/` の中身をまとめて保持してください。生成済みファイルは直接編集せず、`src/` を変更して再ビルドします。
 
+公開版は内容に応じたバージョン付きのJavaScriptバンドルとCSSを読み込み、更新前のファイルがキャッシュに残る影響を避けます。
+
 Windowsでは次のコマンドでビルドと配布用ZIPの作成をまとめて行えます。
 
 ```powershell
